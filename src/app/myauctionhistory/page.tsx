@@ -1,100 +1,105 @@
 "use client";
-import React from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React, { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAccount } from "wagmi";
 
 function MyAuctionHistoryPage(props) {
-  const auctionHistoryData = [
-    {
-      STT: 1,
-      thoiGian: "29/05 19:63:45",
-      bienSoXe: "30K-222.22",
-      trangThai: "Đang đấu giá",
-      soTien: "57.500.000",
-      txHash: "0x5ab...e1b3",
-    },
-    {
-      STT: 2,
-      thoiGian: "30/05 12:30:15",
-      bienSoXe: "29A-987.65",
-      trangThai: "Kết thúc đấu giá",
-      soTien: "72.800.000",
-      txHash: "0x7cd...f8a2",
-    },
-    {
-      STT: 3,
-      thoiGian: "31/05 08:15:22",
-      bienSoXe: "45C-123.45",
-      trangThai: "Đang đấu giá",
-      soTien: "50.200.000",
-      txHash: "0x8ef...d1b7",
-    },
-    {
-      STT: 4,
-      thoiGian: "01/06 14:45:37",
-      bienSoXe: "51B-789.01",
-      trangThai: "Kết thúc đấu giá",
-      soTien: "65.300.000",
-      txHash: "0x2fg...e9c6",
-    },
-    {
-      STT: 5,
-      thoiGian: "02/06 10:10:10",
-      bienSoXe: "36F-246.80",
-      trangThai: "Đang đấu giá",
-      soTien: "60.000.000",
-      txHash: "0x4hi...k3d1",
-    },
-    {
-      STT: 6,
-      thoiGian: "03/06 16:20:55",
-      bienSoXe: "84D-753.09",
-      trangThai: "Kết thúc đấu giá",
-      soTien: "70.100.000",
-      txHash: "0x9lm...u2z8",
-    },
-    {
-      STT: 7,
-      thoiGian: "04/06 09:30:18",
-      bienSoXe: "79G-369.52",
-      trangThai: "Đang đấu giá",
-      soTien: "55.800.000",
-      txHash: "0x0pq...r7w5",
-    },
-    {
-      STT: 8,
-      thoiGian: "05/06 11:55:42",
-      bienSoXe: "28E-987.32",
-      trangThai: "Kết thúc đấu giá",
-      soTien: "68.900.000",
-      txHash: "0x3st...h6v9",
-    },
-    {
-      STT: 9,
-      thoiGian: "06/06 13:40:29",
-      bienSoXe: "49H-135.78",
-      trangThai: "Đang đấu giá",
-      soTien: "62.700.000",
-      txHash: "0x6uv...p5q4",
-    },
-    {
-      STT: 10,
-      thoiGian: "07/06 15:15:11",
-      bienSoXe: "52K-642.30",
-      trangThai: "Kết thúc đấu giá",
-      soTien: "75.200.000",
-      txHash: "0x1wx...z0e3",
-    },
-  ];
+  const { address } = useAccount();
+  console.log(address);
+
+  const [offer, setOffer] = useState<any>(null);
+  const [listing, setListings] = useState({});
+
+  const handleGetOffer = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/offer/findbidder?bidder=${address}`
+      );
+
+      const data = await response.json();
+      console.log("offer", data);
+
+      setOffer(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  useEffect(() => {
+    if (address) {
+      handleGetOffer();
+    }
+  }, [address]);
+
+  const fetchListingData = async (offerId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/auction/find/${offerId}`
+      );
+      const data = await response.json();
+      console.log("listing", data);
+      return data;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (offer) {
+      const fetchListings = async () => {
+        const listingData = {};
+        for (const offerItem of offer) {
+          const listing = await fetchListingData(offerItem.id);
+          if (listing) {
+            listingData[offerItem.id] = listing;
+          }
+        }
+        setListings(listingData);
+      };
+      fetchListings();
+    }
+  }, [offer]);
+
+  const formatDate = (time) => {
+    const date = new Date(time * 1000);
+    const gmtOffset = 7;
+
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    const localTime = new Date(utc + 3600000 * gmtOffset);
+
+    const year = localTime.getFullYear();
+    const month = ("0" + (localTime.getMonth() + 1)).slice(-2);
+    const day = ("0" + localTime.getDate()).slice(-2);
+    const hours = ("0" + localTime.getHours()).slice(-2);
+    const minutes = ("0" + localTime.getMinutes()).slice(-2);
+
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  };
+
+  const getStatusString = (status) => {
+    if (status === 0) return "Đang diễn ra";
+    if (status === 1) return "Đợi trả tiền";
+    if (status === 2) return "Đã huỷ";
+    if (status === 3) return "Timeout";
+    if (status === 4) return "Thành công";
+    return "Unknown";
+};
 
   return (
     <main className="bg-[#475657] min-h-screen">
       <div>
         <p className="px-5 pl-7 pt-3 text-white text-3xl">
-          Lịch sử đấu giá của bạn
+          Lịch sử đấu giá của tôi
         </p>
       </div>
-      <div className="bg-[#4A6D7C] mt-8 !border !border-white !rounded-lg m-5 !text-white">
-            </div>
+      <div className="bg-[#4A6D7C] mt-8 !border !border-white !rounded-lg m-5 !text-white"></div>
       <div className="bg-[#4A6D7C] mt-8 !border !border-white !rounded-lg m-5 !text-white ">
         <Table className="text-white">
           <TableHeader className="!text-center">
@@ -108,22 +113,69 @@ function MyAuctionHistoryPage(props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {auctionHistoryData.map((item, index) => (
-              <TableRow key={index} className="text-white align-middle m-3">
-                <TableCell className="text-center">{item.STT}</TableCell>
-                <TableCell className="text-center">{item.thoiGian}</TableCell>
-                <TableCell className="text-center">{item.bienSoXe}</TableCell>
-                <TableCell className="text-center">{item.trangThai}</TableCell>
-                <TableCell className="text-center">{item.soTien}</TableCell>
-                <TableCell className="text-center">{item.txHash}</TableCell>
+            {Array.isArray(offer) && offer.length > 0 ? (
+              offer.map((offer, index) => (
+                <TableRow key={index} className="text-white align-middle m-3">
+                  <TableCell className="text-center">{index + 1}</TableCell>
+                  <TableCell className="text-center">
+                    {formatDate(offer.timestamp)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {listing[offer.id] ? listing[offer.id].bienSo : ""}
+                  </TableCell>
+                  <TableCell className="text-center flex flex-row justify-center gap-5">
+                    {listing[offer.id]
+                      ? getStatusString(listing[offer.id].listingStatus)
+                      : ""}
+                      <a
+                      href={`http://localhost:3000/auction/auctionDetail/${offer.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src="https://img.icons8.com/?size=100&id=82787&format=png&color=FFFFFF"
+                        alt="External Link"
+                        style={{ width: "16px", height: "16px" }}
+                      />
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {offer.price} VND
+                  </TableCell>
+                  <TableCell className="text-center flex flex-row justify-center gap-5">
+                    {shortenAddress(offer.tx)}{" "}
+                    <a
+                      href={`https://amoy.polygonscan.com/tx/${offer.tx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src="https://img.icons8.com/?size=100&id=82787&format=png&color=FFFFFF"
+                        alt="External Link"
+                        style={{ width: "16px", height: "16px" }}
+                      />
+                    </a>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center">
+                  Chưa tham gia phiên đấu giá nào.
+                </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
-      
     </main>
   );
 }
 
 export default MyAuctionHistoryPage;
+function shortenAddress(address = "", length = 6) {
+  return (
+    address &&
+    `${address.substring(0, 8)}...${address.substring(address.length - length)}`
+  );
+}

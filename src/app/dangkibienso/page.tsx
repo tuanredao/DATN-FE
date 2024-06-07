@@ -7,7 +7,7 @@ import { writeContract, waitForTransactionReceipt } from "@wagmi/core";
 import { nftContractAbi } from "@/abi/nftContractAbi";
 import InputImageBtn from "@/components/AddImage";
 import { toast } from "react-toastify";
-import { config } from "@/config/wagmiConfig";
+import { config } from "@/provider/RainbowProvider"; 
 
 function dangKyBienSoPage(props) {
   const { address } = useAccount();
@@ -40,26 +40,44 @@ function dangKyBienSoPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: nftContractAbi,
-        address: "0x47f515ED707abfB69Eab27224A9CB996528dA761",
+        address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
         functionName: "safeMint",
-        args: [address, bienSo, loaiXe, tinhThanhPho],
+        args: [address, bienSo, tinhThanhPho, loaiXe],
       });
-      console.log('aa', hash);
-      
+
       const finish = async () => {
-        waitForTransactionReceipt(config, {
+        await waitForTransactionReceipt(config, {
           hash,
         });
-
-        toast.promise(finish(), {
-          pending: "Process minting...",
-          success: "Mint NFT successful!",
-          error: "Mint NFT failed, please try again!",
-        });
       };
+
+      toast.promise(finish(), {
+        pending: "Process minting...",
+        success: "Mint NFT successful!",
+        error: "Mint NFT failed, please try again!",
+      });
     } catch (error) {
       console.log("Error mint NFT: ", error);
       toast.error(error?.message || error?.reason);
+    }
+  };
+
+  const saveNFT = async () => {
+
+    try {
+      const response = await fetch("http://localhost:5000/BienSo/save-all", {
+        method: "POST"
+      });
+
+      if (response.ok) {
+        toast.success("Data saved successfully!");
+      } else {
+        const errorData = await response.json();
+        toast.error(`Error saving data: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Error calling API: ", error);
+      toast.error("Error saving data, please try again!");
     }
   };
 
@@ -69,8 +87,8 @@ function dangKyBienSoPage(props) {
     <main className="bg-[#475657] min-h-screen">
       <div className="text-white border-2 rounded-lg border-white p-10 m-5">
         <p className="mb-5 text-4xl font-semibold">Đăng kí biển số đấu giá</p>
-        <div className="border-2 rounded-lg border-white">
-          <div className="flex justify-between items-center ">
+        <div className="border-2 rounded-lg border-white ">
+          <div className="flex justify-center items-center ">
             <div className="gap-8 flex flex-col">
               <div className="p-5 flex flex-row justify-start gap-36">
                 <p className="text-2xl font-medium">Biển số</p>
@@ -84,22 +102,6 @@ function dangKyBienSoPage(props) {
                     name="bienSo"
                     value={bienSo}
                     onChange={(e) => setLicensePlate(e.target.value)}
-                    disabled={disableInputs}
-                  />
-                </div>
-              </div>
-              <div className="p-5 flex flex-row justify-start gap-[148px]">
-                <p className="text-2xl font-medium">Loại xe</p>
-                <div>
-                  <Input
-                    type="text"
-                    placeholder={""}
-                    className={`w-[280px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
-                      disableInputs && "opacity-50"
-                    }`}
-                    name="loaiXe"
-                    value={loaiXe}
-                    onChange={(e) => setVehicleType(e.target.value)}
                     disabled={disableInputs}
                   />
                 </div>
@@ -120,26 +122,36 @@ function dangKyBienSoPage(props) {
                   />
                 </div>
               </div>
-            </div>
-            <div className=" p-5 mr-48 flex flex-col justify-start gap-12">
-              <div className=" text-2xl font-medium w-full text-center">
-                Ảnh mặt trước
+              <div className="p-5 flex flex-row justify-start gap-[148px]">
+                <p className="text-2xl font-medium">Loại xe</p>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder={""}
+                    className={`w-[280px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
+                      disableInputs && "opacity-50"
+                    }`}
+                    name="loaiXe"
+                    value={loaiXe}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    disabled={disableInputs}
+                  />
+                </div>
               </div>
-              <InputImageBtn
-                setUrlImg={setAnhBienSo}
-                urlImg={anhBienSo}
-                title={undefined}
-                disabled={disableInputs}
-              />
-              <Button disabled={disableInputs}>Upload</Button>
             </div>
           </div>
-          <div className="justify-center flex my-5">
+          <div className="justify-center flex my-5 gap-5">
             <Button
               className="w-[200px] text-xl rounded-xl"
               onClick={handleMintNFT}
             >
               Mint
+            </Button>
+            <Button
+              className="w-[200px] text-xl rounded-xl"
+              onClick={saveNFT}
+            >
+              Xác nhận biển số
             </Button>
           </div>
         </div>
@@ -150,7 +162,7 @@ function dangKyBienSoPage(props) {
               disabled
               placeholder=""
               value={address}
-              className="w-[520px] bg-[#475657] content-center text-xl font-bold"
+              className="w-[540px] bg-[#475657] text-xl font-bold items-center"
             />
             <div
               className={`rounded-full border border-white p-2 text-[10px] ${

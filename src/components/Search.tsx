@@ -23,11 +23,11 @@ function Search({
 
 
   return (
-    <div className="flex gap-20 justify-center pt-10">
+    <div className="flex gap-20 justify-center pt-10 text-white placeholder-color">
       <Input
         type="search"
         placeholder="Biển số cần tìm"
-        className="w-[280px]"
+        className="w-[280px] rounded-2xl !bg-[#475657]"
         value={searchBienso}
         onChange={(e) => {
           setSearchBienso(e.target.value);
@@ -36,7 +36,7 @@ function Search({
       <Input
         type="search"
         placeholder="Tỉnh/Thành phố"
-        className="w-[280px]"
+        className="w-[280px] rounded-2xl !bg-[#475657]"
         value={searchTinhThanhPho}
         onChange={(e) => {
           setSearchTinhThanhPho(e.target.value);
@@ -45,7 +45,7 @@ function Search({
       <Input
         type="search"
         placeholder="Loại xe"
-        className="w-[280px]"
+        className="w-[280px] rounded-2xl !bg-[#475657]"
         value={searchLoaiXe}
         onChange={(e) => {
           setSearchLoaiXe(e.target.value);

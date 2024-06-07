@@ -3,30 +3,16 @@ import * as React from "react";
 import {
   RainbowKitProvider,
   getDefaultWallets,
-  Locale,
   getDefaultConfig,
 } from "@rainbow-me/rainbowkit";
-import {
-  argentWallet,
-  trustWallet,
-  ledgerWallet,
-  rabbyWallet,
-} from "@rainbow-me/rainbowkit/wallets";
+import { rabbyWallet } from "@rainbow-me/rainbowkit/wallets";
 import { WagmiProvider } from "wagmi";
-import {
-  arbitrum,
-  base,
-  mainnet,
-  optimism,
-  polygon,
-  sepolia,
-  polygonAmoy
-} from "wagmi/chains";
+import { polygonAmoy } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const { wallets } = getDefaultWallets();
 
-const config = getDefaultConfig({
+export const config = getDefaultConfig({
   appName: "RainbowKit",
   projectId: "863e8d3a85406255198df03f522f31ce",
   wallets: [
@@ -36,7 +22,7 @@ const config = getDefaultConfig({
       wallets: [rabbyWallet],
     },
   ],
-  chains: [polygonAmoy, mainnet],
+  chains: [polygonAmoy],
   ssr: true,
 });
 
@@ -50,15 +36,6 @@ export function RainbowProvider({
   React.useEffect(() => setMounted(true), []);
 
   return (
-    // <WagmiConfig config={wagmiConfig}>
-    //   <RainbowKitProvider
-    //     chains={chains}
-    //     appInfo={demoAppInfo}
-    //   >
-    //     {mounted && children}
-    //   </RainbowKitProvider>
-    // </WagmiConfig>
-
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>{mounted && children}</RainbowKitProvider>

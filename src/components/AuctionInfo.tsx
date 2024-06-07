@@ -13,9 +13,22 @@ function AuctionInfo({ data }) {
   } else if (data.listingStatus === 0) {
     statusColor = "bg-[#4A6D7C]";
     statusText = "Đấu giá";
-  } else if (data.listingStatus === 1 || (data.listingStatus === 0 && Date.now() > data.endTime * 1000)) {
-    statusColor = "bg-[#4A6D7C]";
+  } else if (
+    data.listingStatus === 1 ||
+    (data.listingStatus === 0 && Date.now() > data.endTime * 1000)
+  ) {
+    statusColor = "bg-gray-400";
     statusText = "Đã hoàn thành";
+  }else if (
+    data.listingStatus === 2
+  ) {
+    statusColor = "bg-[#4A6D7C]";
+    statusText = "Chờ trả tiền";
+  } else if (
+    data.listingStatus === 3
+  ) {
+    statusColor = "bg-gray-400";
+    statusText = "Đấu giá thành công";
   } else {
     statusColor = "bg-gray-400";
     statusText = "Không khả dụng";
@@ -60,10 +73,21 @@ function AuctionInfo({ data }) {
 
   return (
     <div className="p-3 flex flex-col gap-5 border border-white w-full max-w-[250px] rounded-xl">
-      <Image src={data?.image} alt="Anh-Nft" width={232} height={136} />
+      <div className="w-full h-[150px] rounded-xl border border-white text-white bg-[#4A6D7C] flex flex-col justify-center items-center text-5xl font-bold gap-2">
+        {data?.bienSo && (
+          <>
+            <div>{data.bienSo.replace(/-/g, "").slice(0, 3)}</div>
+            <div>
+              {data.bienSo.replace(/-/g, "").slice(3, 6) +
+                "." +
+                data.bienSo.replace(/-/g, "").slice(6)}
+            </div>
+          </>
+        )}
+      </div>
       <div className="text-white flex justify-between px-3">
         <p>{data?.city}</p>
-        <p>{data?.bienSo}</p>
+        <p>{data?.type}</p>
       </div>
       <div className="px-3 flex text-white text-center">
         <div className="w-12 h-10 relative">

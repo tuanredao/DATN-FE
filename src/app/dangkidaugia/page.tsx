@@ -7,7 +7,7 @@ import { writeContract, waitForTransactionReceipt } from "@wagmi/core";
 import { auctiontAbi } from "@/abi/auctionAbi";
 import InputImageBtn from "@/components/AddImage";
 import { toast } from "react-toastify";
-import { config } from "@/config/wagmiConfig";
+import { config } from "@/provider/RainbowProvider"; 
 
 function dangKyDauGiaPage(props) {
   const { address } = useAccount();
@@ -15,13 +15,15 @@ function dangKyDauGiaPage(props) {
   console.log(isConnected);
 
   const [nftContract, setnftContract] = useState("");
-  const [tokenId, settokenId] = useState("");
-  const [price, setPrice] = useState("");
-  const [stepPrice, setstepPrice] = useState("");
+  const [tokenId, setTokenId] = useState("");
+  const [id, setId] = useState("");
+  const [offerId, setOfferId] = useState("");
+  const [price, setPrice] = useState<any>("");
+  const [stepPrice, setstepPrice] = useState<any>("");
   const [startTime, setstartTime] = useState("");
   const [duration, setDuration] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
+  const [depositAmount, setDepositAmount] = useState<any>("");
   const [depositTime, setDepositTime] = useState("");
   const [authorized, setAuthorized] = useState(false);
 
@@ -45,26 +47,62 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "createListing",
-        args: [nftContract, tokenId, price, stepPrice, startTime, duration],
+        args: [nftContract, tokenId, price*1e18, stepPrice*1e18, startTime, duration],
       });
+
       const finish = async () => {
-        waitForTransactionReceipt(config, {
+        await waitForTransactionReceipt(config, {
           hash,
         });
 
-        toast.promise(finish(), {
-          pending: "Process minting...",
-          success: "Mint NFT successful!",
-          error: "Mint NFT failed, please try again!",
-        });
+        try {
+          const response = await fetch("http://localhost:5000/Auction/save", {
+            method: "POST",
+          });
+
+          if (response.ok) {
+            toast.success("Auction listing created and data saved!");
+          } else {
+            toast.error("Auction listing created but failed to save data!");
+          }
+        } catch (apiError) {
+          console.log("API request error: ", apiError);
+          toast.error("Auction listing created but failed to save data!");
+        }
       };
+
+      toast.promise(finish(), {
+        pending: "Processing auction...",
+        success: "Auction listing created!",
+        error: "Auction listing failed, please try again!",
+      });
     } catch (error) {
-      console.log("Error mint NFT: ", error);
+      console.log("Error creating auction listing: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
+
+  const saveAuction = async () => {
+
+    try {
+      const response = await fetch("http://localhost:5000/Auction/save", {
+        method: "GET"
+      });
+
+      if (response.ok) {
+        toast.success("Data saved successfully!");
+      } else {
+        const errorData = await response.json();
+        toast.error(`Error saving data: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Error calling API: ", error);
+      toast.error("Error saving data, please try again!");
+    }
+  };
+
 
   const handlePause = async () => {
     if (!authorized) {
@@ -74,8 +112,8 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
-        functionName: "pause"
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        functionName: "pause",
       });
       const finish = async () => {
         waitForTransactionReceipt(config, {
@@ -102,8 +140,8 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
-        functionName: "unpause"
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        functionName: "unpause",
       });
       const finish = async () => {
         waitForTransactionReceipt(config, {
@@ -130,7 +168,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDeadline",
         args: [deadline],
       });
@@ -159,7 +197,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDepositAmount",
         args: [depositAmount],
       });
@@ -188,9 +226,67 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x1F31C80B765E00fCdDf2F58153Cd75E423fbE680",
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDepositTime",
         args: [depositTime],
+      });
+      const finish = async () => {
+        waitForTransactionReceipt(config, {
+          hash,
+        });
+
+        toast.promise(finish(), {
+          pending: "Process ...",
+          success: "Set Deposit Time successful!",
+          error: "Set Deposit Time failed, please try again!",
+        });
+      };
+    } catch (error) {
+      console.log("Error : ", error);
+      toast.error(error?.message || error?.reason);
+    }
+  };
+
+  const handleEndAuction = async () => {
+    if (!authorized) {
+      toast.error("Bạn không có quyền thực hiện hành động này.");
+      return;
+    }
+    try {
+      const hash = await writeContract(config, {
+        abi: auctiontAbi,
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        functionName: "endAuction",
+        args: [id],
+      });
+      const finish = async () => {
+        waitForTransactionReceipt(config, {
+          hash,
+        });
+
+        toast.promise(finish(), {
+          pending: "Process ...",
+          success: "Set Deposit Time successful!",
+          error: "Set Deposit Time failed, please try again!",
+        });
+      };
+    } catch (error) {
+      console.log("Error : ", error);
+      toast.error(error?.message || error?.reason);
+    }
+  };
+
+  const handleCanceAuction = async () => {
+    if (!authorized) {
+      toast.error("Bạn không có quyền thực hiện hành động này.");
+      return;
+    }
+    try {
+      const hash = await writeContract(config, {
+        abi: auctiontAbi,
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        functionName: "cancelListing",
+        args: [id],
       });
       const finish = async () => {
         waitForTransactionReceipt(config, {
@@ -263,7 +359,7 @@ function dangKyDauGiaPage(props) {
                     }`}
                     name="tokenId"
                     value={tokenId}
-                    onChange={(e) => settokenId(e.target.value)}
+                    onChange={(e) => setTokenId(e.target.value)}
                     disabled={disableInputs}
                   />
                 </div>
@@ -334,20 +430,54 @@ function dangKyDauGiaPage(props) {
               </div>
             </div>
           </div>
-          <div className="justify-center flex my-5">
+          <div className="justify-center flex my-5 gap-7">
             <Button
-              className="w-[200px] text-xl rounded-xl"
+              className="w-[250px] text-xl rounded-xl"
               onClick={handleSignAuction}
             >
               Đăng kí đấu giá
             </Button>
+
+            <Button
+              className="w-[250px] text-xl rounded-xl"
+              onClick={saveAuction}
+            >
+              Xác nhận phiên đấu giá
+            </Button>
           </div>
         </div>
 
-        <div className="border-2 rounded-lg border-white mb-16">
-          <p className="m-5 text-4xl font-semibold">Quản lý phiên đấu giá</p>
-          <div className="flex items-center w-full">
-            <div className="gap-8 flex flex-col w-full">
+        <div className="border-2 rounded-lg border-white ">
+          <p className="m-5 text-4xl font-semibold mb-20">
+            Quản lý phiên đấu giá
+          </p>
+          <div className="flex items-center w-full  ">
+            <div className="gap-8 flex flex-col w-full ">
+              <div className="p-5 flex flex-row justify-center border-2 rounded-2xl border-white mx-72 ">
+                <Input
+                  type="number"
+                  placeholder={"Nhập ID"}
+                  className={`w-[100px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
+                    disableInputs && "opacity-50"
+                  }`}
+                  name="id"
+                  value={id}
+                  onChange={(e) => setId(e.target.value)}
+                  disabled={disableInputs}
+                />
+                <Button
+                  className="w-[300px] text-xl rounded-xl mx-20"
+                  onClick={handleEndAuction}
+                >
+                  Kết thúc phiên đấu giá
+                </Button>
+                <Button
+                  className="w-[300px] text-xl rounded-xl mx-20"
+                  onClick={handleCanceAuction}
+                >
+                  Huỷ phiên đấu giá
+                </Button>
+              </div>
               <div className="p-5 flex flex-row justify-between">
                 <p className="text-2xl font-medium">Emergency pause</p>
                 <div>
@@ -365,11 +495,11 @@ function dangKyDauGiaPage(props) {
                   </Button>
                 </div>
               </div>
-              <div className="p-5 flex flex-row justify-between">
+              <div className="p-5 flex flex-row items-center justify-between">
                 <p className="text-2xl font-medium">
                   Khoảng thời gian tối đa để trả tiền
                 </p>
-                <div className="flex ">
+                <div className="flex justify-end gap-40">
                   <Input
                     type="text"
                     placeholder={""}
@@ -381,19 +511,17 @@ function dangKyDauGiaPage(props) {
                     onChange={(e) => setDeadline(e.target.value)}
                     disabled={disableInputs}
                   />
-                  <div className="justify-center flex my-5">
-                    <Button
-                      className="w-[200px] text-xl rounded-xl mt-5 "
-                      onClick={handleSetDeadline}
-                    >
-                      Xác nhận
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-[200px] text-xl rounded-xl "
+                    onClick={handleSetDeadline}
+                  >
+                    Xác nhận
+                  </Button>
                 </div>
               </div>
               <div className="p-5 flex flex-row justify-between">
                 <p className="text-2xl font-medium">Số tiền cọc</p>
-                <div className="flex">
+                <div className="flex justify-end gap-40">
                   <Input
                     type="text"
                     placeholder={""}
@@ -405,19 +533,17 @@ function dangKyDauGiaPage(props) {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     disabled={disableInputs}
                   />
-                  <div className="justify-center flex my-5">
-                    <Button
-                      className="w-[200px] text-xl rounded-xl mt-5 "
-                      onClick={handleSetDepositAmount}
-                    >
-                      Xác nhận
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-[200px] text-xl rounded-xl "
+                    onClick={handleSetDepositAmount}
+                  >
+                    Xác nhận
+                  </Button>
                 </div>
               </div>
               <div className="p-5 flex flex-row justify-between">
                 <p className="text-2xl font-medium">Thời gian cọc trước</p>
-                <div className="flex">
+                <div className="flex justify-end gap-40">
                   <Input
                     type="text"
                     placeholder={""}
@@ -429,14 +555,12 @@ function dangKyDauGiaPage(props) {
                     onChange={(e) => setDepositTime(e.target.value)}
                     disabled={disableInputs}
                   />
-                  <div className="justify-center flex my-5">
-                    <Button
-                      className="w-[200px] text-xl rounded-xl mt-5 "
-                      onClick={handleSetDepositTime}
-                    >
-                      Xác nhận
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-[200px] text-xl rounded-xl "
+                    onClick={handleSetDepositTime}
+                  >
+                    Xác nhận
+                  </Button>
                 </div>
               </div>
             </div>

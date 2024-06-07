@@ -30,6 +30,7 @@ function infoPage(props) {
     frontImage: "",
     backImage: "",
     wallet: "",
+    KYC: false
   });
 
   const [userInfo, setUserInfo] = useState(null);
@@ -82,6 +83,7 @@ function infoPage(props) {
       ...prevFormData,
       [name]: value,
       wallet: account.address,
+      KYC: false
     }));
   };
 

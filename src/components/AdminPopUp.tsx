@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import Image from "next/image";
 import profile from "./ui/icon/profile.png";
+import { ShieldCheck } from "lucide-react";
 
 function NewDepositoryBtn() {
   const node = useRef();
@@ -75,7 +76,7 @@ function NewDepositoryBtn() {
   return (
     <div className={``}>
       <div className="cursor-pointer" ref={node} onClick={toggleOpenMenu}>
-          <Image src={profile} alt="profile" width={50} height={50} />
+        <ShieldCheck size={50} color="white"/>
       </div>
       <motion.div
         initial="exit"
@@ -84,21 +85,19 @@ function NewDepositoryBtn() {
         className={`absolute w-[215px] rounded-md dark:bg-bgDark z-[1] dark:text-textDark bg-white`}
       >
         <div className="bg-white text-black rounded-lg cursor-pointer">
-          <Link href="/info">
+          <Link href="/dangkibienso">
             <div className=" px-4 py-2 border-b-[2px] border-b-black hover:bg-gray-300">
-              Thông tin cá nhân
+              Quản lý biển số xe
             </div>
           </Link>
-
-          <Link href="/myNFT">
+          <Link href="/dangkidaugia">
             <div className=" px-4 py-2 border-b-[2px] border-b-black hover:bg-gray-300">
-            Thông tin tài khoản
+              Quản lý phiên đấu giá
             </div>
           </Link>
-
-          <Link href="/myauctionhistory">
+          <Link href="/manageusers">
             <div className=" px-4 py-2 border-b-[2px] border-b-black hover:bg-gray-300">
-              Lịch sử đấu giá của tôi
+              Quản lý người dùng
             </div>
           </Link>
         </div>

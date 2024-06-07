@@ -6,6 +6,7 @@ import AuctionInfo from "@/components/AuctionInfo";
 
 function Page(props) {
   const [info, setInfo] = useState([]);
+  const [stats, setStats] = useState<any>([]);
   const [searchBienso, setSearchBienso] = useState("");
   const [searchTinhThanhPho, setSearchTinhThanhPho] = useState("");
   const [searchLoaiXe, setSearchLoaiXe] = useState("");
@@ -36,17 +37,30 @@ function Page(props) {
     handleGetInfo();
   }, []);
 
+  const handleGetStats = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/auction/stats");
+      const data = await response.json();
+      setStats(data);
+      
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    handleGetStats();
+  }, []);
+
   const filterData = (item) => {
     return (
       item.bienSo.toLowerCase().includes(searchBienso.toLowerCase()) &&
       item.city.toLowerCase().includes(searchTinhThanhPho.toLowerCase()) &&
       item.type.toLowerCase().includes(searchLoaiXe.toLowerCase()) &&
-      (filterState === "all" || item.listingStatus === parseInt(filterState)) &&
-      (searchStatusText === "" || item.statusText === searchStatusText)
+      (filterState === "all" || item.listingStatus === parseInt(filterState))
     );
   };
-
-  // Xử lý khi người dùng nhấp vào một nút lọc
+  
   const handleFilterButtonClick = (state: string) => {
     const updatedButtons = { ...filterButtons };
   
@@ -57,24 +71,18 @@ function Page(props) {
     updatedButtons[state] = true;
   
     setFilterButtons(updatedButtons);
-  
-    if (state === "0") {
-      setSearchStatusText("Chờ đấu giá");
-    } else {
-      setSearchStatusText("");
-    }
+    setFilterState(state);
   };
-  
 
   return (
     <main className="bg-[#475657] min-h-screen">
     <div>
       {/* Phần thông tin và bộ lọc ở đây */}
       <div className="text-white px-20 border-b-2 border-white  items-center flex justify-between align-middle  py-5">
-        <CardInfo value={"357.250.000.000 VND"} name={"Tổng số tiền thu về"} />
-        <CardInfo value={260} name={"Biển số đang đấu giá"} />
-        <CardInfo value={120} name={"Biển số chờ đấu giá"} />
-        <CardInfo value={20} name={"Biển số đã bán"} />
+        <CardInfo value={stats?.totalSold/1e18} name={"Tổng số tiền thu về"} />
+        <CardInfo value={stats?.pendingNFT} name={"Biển số đang đấu giá"} />
+        <CardInfo value={stats?.notSoldNFT} name={"Biển số chờ đấu giá"} />
+        <CardInfo value={stats?.soldNFT} name={"Biển số đã bán"} />
       </div>
       <div className="pb-10 mb-10 border-b-2">
         <SearchSmall

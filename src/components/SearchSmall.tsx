@@ -25,12 +25,12 @@ function SearchSmall({
   setFilterState,
   handleFilterButtonClick,
 }: SearchProps) {
-  const [activeButton, setActiveButton] = useState(""); 
+  const [activeButton, setActiveButton] = useState("");
 
-  const handleButtonClick = (buttonState) => {
-    setActiveButton(buttonState); 
-    handleFilterButtonClick(buttonState); 
-  };
+  const handleButtonClick = (buttonState: string) => {
+    setActiveButton(buttonState);
+    handleFilterButtonClick(buttonState);
+  };  
 
   const pathname = usePathname();
   console.log(pathname);
@@ -48,7 +48,6 @@ function SearchSmall({
           onChange={(e) => setSearchBienso(e.target.value)}
         />
 
-        {/* Hiển thị nút "Tất cả" nếu không phải trang "myNFT" */}
         {!isMyNFTPage && (
           <Button
             className={`!bg-[#475657] border border-white rounded-2xl ${
@@ -107,13 +106,9 @@ function SearchSmall({
           onChange={(e) => setSearchTinhThanhPho(e.target.value)}
         />
 
-        {/* Hiển thị nút "Lịch sử đấu giá" nếu trang "myNFT" */}
         {pathname.includes("myNFT") && (
           <Link href="/auctionHistory">
-            <Button
-              className={`!bg-[#475657] border border-white rounded-2xl`}
-              onClick={() => handleButtonClick("2")}
-            >
+            <Button className={`!bg-[#475657] border border-white rounded-2xl`}>
               Lịch sử đấu giá
             </Button>
           </Link>

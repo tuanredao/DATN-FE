@@ -17,13 +17,13 @@ function AuctionInfo({ data }) {
     data.listingStatus === 1 ||
     (data.listingStatus === 0 && Date.now() > data.endTime * 1000)
   ) {
-    statusColor = "bg-gray-400";
-    statusText = "Đã hoàn thành";
+    statusColor = "bg-[#4A6D7C]";
+    statusText = "Chờ trả tiền";
   }else if (
     data.listingStatus === 2
   ) {
-    statusColor = "bg-[#4A6D7C]";
-    statusText = "Chờ trả tiền";
+    statusColor = "bg-gray-400";
+    statusText = "Đã huỷ";
   } else if (
     data.listingStatus === 3
   ) {

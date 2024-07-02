@@ -50,9 +50,8 @@ function MyAuctionHistoryPage(props) {
       return null;
     }
   };
-
   useEffect(() => {
-    if (offer) {
+    if (Array.isArray(offer)) {
       const fetchListings = async () => {
         const listingData = {};
         for (const offerItem of offer) {
@@ -64,6 +63,8 @@ function MyAuctionHistoryPage(props) {
         setListings(listingData);
       };
       fetchListings();
+    } else {
+      console.error("Offer is not an array:", offer);
     }
   }, [offer]);
 
@@ -87,10 +88,10 @@ function MyAuctionHistoryPage(props) {
     if (status === 0) return "Đang diễn ra";
     if (status === 1) return "Đợi trả tiền";
     if (status === 2) return "Đã huỷ";
-    if (status === 3) return "Timeout";
-    if (status === 4) return "Thành công";
+    if (status === 3) return "Thành công";
+    if (status === 4) return "Đã huỷ";
     return "Unknown";
-};
+  };
 
   return (
     <main className="bg-[#475657] min-h-screen">
@@ -127,7 +128,7 @@ function MyAuctionHistoryPage(props) {
                     {listing[offer.id]
                       ? getStatusString(listing[offer.id].listingStatus)
                       : ""}
-                      <a
+                    <a
                       href={`http://localhost:3000/auction/auctionDetail/${offer.id}`}
                       target="_blank"
                       rel="noopener noreferrer"

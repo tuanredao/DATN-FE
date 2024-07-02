@@ -48,7 +48,6 @@ function Page(props) {
     fetchUserData();
   }, [account.address]);
 
-  // Trạng thái của các nút lọc
   const [filterButtons, setFilterButtons] = useState({
     all: true,
     0: false,
@@ -109,7 +108,7 @@ function Page(props) {
 
   return (
     <div>
-      <div className="text-white px-5 border-b-2 border-white  items-center flex justify-between align-middle  py-5">
+      <div className="text-white px-5 border-b-2 border-white  items-center flex justify-center align-middle gap-72 py-5">
         <div className="flex justify-start items-start flex-col gap-5">
           <div className="items-center text-5xl font-bold">
             {formData?.fullName}
@@ -117,11 +116,10 @@ function Page(props) {
           <div className="text-base">{address}</div>
         </div>
         <div className="flex gap-5">
-          <CardInfo value={"357.250.000.000 VND"} name={"Tổng giá trị"} />
-          <CardInfo value={260} name={"Biển số xe sở hũu"} />
+          <CardInfo value={info?.length} name={"Biển số xe sở hũu"} />
         </div>
       </div>
-      <div className="pb-10 mb-10 border-b-2">
+      <div className="p-5 border-b-2 flex flex-row justify-center items-center">
         <SearchSmall
           searchBienso={searchBienso}
           setSearchBienso={setSearchBienso}
@@ -129,8 +127,6 @@ function Page(props) {
           setSearchTinhThanhPho={setSearchTinhThanhPho}
           searchLoaiXe={searchLoaiXe}
           setSearchLoaiXe={setSearchLoaiXe}
-          setFilterState={setFilterState}
-          handleFilterButtonClick={handleFilterButtonClick}
         />
       </div>
       {isLoading ? (

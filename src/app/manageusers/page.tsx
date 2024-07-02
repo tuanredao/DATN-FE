@@ -59,9 +59,7 @@ function ManageUsersPage(props) {
   };
 
   const filteredUsers = auctionHistoryData?.users?.filter((item) => {
-    const nameMatch = item.fullName
-      .toLowerCase()
-      .includes(searchName.toLowerCase());
+    const nameMatch = item.fullName?.toLowerCase().includes(searchName.toLowerCase());
     const statusMatch =
       searchTrangThai === ""
         ? true

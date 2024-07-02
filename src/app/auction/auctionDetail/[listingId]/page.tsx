@@ -1,5 +1,6 @@
 "use client";
 import { auctiontAbi } from "@/abi/auctionAbi";
+import { USDCabi } from "@/abi/USDCabi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,13 +11,12 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { config } from "@/provider/RainbowProvider"; 
+import { config } from "@/provider/RainbowProvider";
 import {
   readContract,
   waitForTransactionReceipt,
   writeContract,
 } from "@wagmi/core";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -24,7 +24,8 @@ import { useAccount, useReadContract } from "wagmi";
 
 function auctionDetail() {
   const param = useParams();
-  const { address } = useAccount();
+  const address = useAccount().isConnected;
+  const account = useAccount();
 
   const [info, setInfo] = useState<any>(null);
   const [offer, setOffer] = useState<any>(null);
@@ -33,8 +34,67 @@ function auctionDetail() {
   const [duration, setDuration] = useState(null);
   const [offerPrice, setOfferPrice] = useState<any>("");
   const [authorized, setAuthorized] = useState<any>(false);
+  const [checkKYC, setCheckKYC] = useState<any>(false);
   const [amount, setAmount] = useState<any>(null);
   const [deadline, setDeadline] = useState<any>(null);
+  const [checkApprove, setCheckApprove] = useState<any>(null);
+  const [highestBidder, setHighestBidder] = useState<any>(null);
+  const [paidAmount, setPaidAmount] = useState<any>(null);
+  const [auctionData, setAuctionData] = useState({
+    deadline: "",
+    depositAmount: "",
+    depositTime: "",
+  });
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!address) {
+        console.log("Address is undefined or not provided.");
+        return;
+      }
+
+      try {
+        const approved = await readContract(config, {
+          abi: USDCabi,
+          address: "0xF4bFc32C9B60c9Dfc43060Ac168690e536646cc2",
+          functionName: "allowance",
+          args: [account.address, "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f"],
+        });
+        console.log("approved", approved);
+        setCheckApprove(approved);
+      } catch (error) {
+        console.log("Error checking approval:", error);
+      }
+    };
+
+    checkApproval();
+  }, [account.address]);
+
+  const handleApprove = async () => {
+    try {
+      const hash = await writeContract(config, {
+        abi: USDCabi,
+        address: "0xF4bFc32C9B60c9Dfc43060Ac168690e536646cc2",
+        functionName: "approve",
+        args: ["0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f", 99999 * 1e18],
+      });
+
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Approve successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Approve failed: ${data.message}`;
+          },
+        },
+      });
+    } catch (error) {
+      console.log("Error Approve: ", error);
+      toast.error(error?.message || error?.reason);
+    }
+  };
 
   const getDeadline = async () => {
     try {
@@ -83,6 +143,12 @@ function auctionDetail() {
   };
   useEffect(() => {
     handleGetData();
+
+    const intervalId = setInterval(() => {
+      handleGetData();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleGetOffer = async () => {
@@ -101,27 +167,91 @@ function auctionDetail() {
   };
   useEffect(() => {
     handleGetOffer();
+    const intervalId = setInterval(() => {
+      handleGetOffer();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const handleCheckKYC = async () => {
+    try {
+      console.log("address", account.address);
+
+      const response = await fetch(
+        `http://localhost:5000/users/checkKyc?wallet=${account.address}`
+      );
+
+      const kycStatus = await response.json();
+      console.log("kycStatus", kycStatus);
+
+      if (kycStatus === true) {
+        setCheckKYC(true);
+      } else {
+        setCheckKYC(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    if (address) {
+      handleCheckKYC();
+    }
+  }, [address]);
+  console.log(info?.id, account.address);
+
+  const getHighestBidder = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/offer/highest?id=${param.listingId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const bidder = await response.text();
+      if (bidder) {
+        setHighestBidder(bidder);
+      } else {
+        console.error("No bidder data found");
+      }
+      return bidder;
+    } catch (error) {
+      console.error("Error fetching highest bidder:", error);
+    }
+  };
+  useEffect(() => {
+    getHighestBidder();
   }, []);
 
   useEffect(() => {
     const checkDeposited = async () => {
       try {
+        if (!info || !account.address) return;
+
         const result = await readContract(config, {
           abi: auctiontAbi,
           address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
           functionName: "userHasDeposited",
-          args: [info?.id, address],
+          args: [info.id, account.address],
         });
         setAuthorized(result);
+        console.log("setAuthorized", result);
       } catch (error) {
         console.error("Error checking deposit:", error);
       }
     };
 
     checkDeposited();
-  }, [info?.id, address]);
-
-  useEffect(() => {}, [authorized]);
+  }, [info, account.address]);
 
   const handleDeposit = async () => {
     try {
@@ -131,25 +261,21 @@ function auctionDetail() {
         functionName: "deposit",
         args: [info?.id],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process deposit...",
-          success: "Deposit successful!",
-          error: "Deposit failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Deposit successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Deposit failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error Deposit: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
-  // useEffect(() => {
-  //   handleDeposit();
-  // }, []);
 
   const handleMakeOffer = async () => {
     const minOfferPrice = data?.highestPrice + info?.stepPrice;
@@ -164,25 +290,21 @@ function auctionDetail() {
         functionName: "makeOffer",
         args: [info?.id, offerPrice * 1e18],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process Make Offer...",
-          success: "Make Offer successful!",
-          error: "Make Offer failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Make Offer successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Make Offer failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error Make Offer: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
-  // useEffect(() => {
-  //   handleMakeOffer();
-  // }, []);
 
   const handleFund = async () => {
     const minOfferPrice = data?.highestPrice + info?.stepPrice;
@@ -195,27 +317,23 @@ function auctionDetail() {
         abi: auctiontAbi,
         address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "fund",
-        args: [info?.id, amount*1e18],
+        args: [info?.id, amount * 1e18],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process Fund...",
-          success: "Fund successful!",
-          error: "Fund failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Fund successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Fund failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error Fund: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
-  // useEffect(() => {
-  //   handleFund();
-  // }, []);
 
   const handleClaimFundTimeOut = async () => {
     try {
@@ -225,25 +343,21 @@ function auctionDetail() {
         functionName: "claimFundTimeOut",
         args: [info?.id],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process claimFundTimeOut...",
-          success: "claimFundTimeOut successful!",
-          error: "claimFundTimeOut failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Claim Fund successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Claim Fund failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error claimFundTimeOut: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
-  // useEffect(() => {
-  //   handleClaimFundTimeOut();
-  // }, []);
 
   const handleWithdrawDeposit = async () => {
     try {
@@ -253,25 +367,21 @@ function auctionDetail() {
         functionName: "withdrawDeposit",
         args: [info?.id],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process withdrawDeposit...",
-          success: "withdrawDeposit successful!",
-          error: "withdrawDeposit failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Withdraw deposit successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Withdraw deposit failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error withdrawDeposit: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
-  // useEffect(() => {
-  //   handleWithdrawDeposit();
-  // }, []);
 
   const saveOffer = async () => {
     try {
@@ -287,13 +397,18 @@ function auctionDetail() {
     }
   };
 
-  useEffect(() => {
-    if (info && info.listingStatus === 0) {
-      const currentTime = Date.now();
+  const currentTime = Date.now();
+  const eopTime = info?.endTime + deadline;
+  console.log("time", info?.endTime, deadline, eopTime);
 
-      if (currentTime < info.startTime * 1000) {
+  useEffect(() => {
+    if (info) {
+      console.log("Info End Time:", info.endTime * 1000);
+
+      if (currentTime < info?.startTime * 1000) {
+        console.log("case1");
         const countdownTimer = setInterval(() => {
-          const remaining = info.startTime * 1000 - Date.now();
+          const remaining = info?.startTime * 1000 - Date.now();
           if (remaining <= 0) {
             clearInterval(countdownTimer);
           }
@@ -301,11 +416,26 @@ function auctionDetail() {
         }, 1000);
         return () => clearInterval(countdownTimer);
       } else if (
-        currentTime >= info.startTime * 1000 &&
-        currentTime < info.endTime * 1000
+        currentTime >= info?.startTime * 1000 &&
+        currentTime < info?.endTime * 1000
       ) {
+        console.log("case2");
         const durationTimer = setInterval(() => {
-          const duration = info.endTime * 1000 - Date.now();
+          const duration = info?.endTime * 1000 - Date.now();
+          if (duration <= 0) {
+            clearInterval(durationTimer);
+          }
+          setDuration(duration);
+        }, 1000);
+        return () => clearInterval(durationTimer);
+      } else if (info?.listingStatus == 1) {
+        console.log("case3");
+        console.log("eop", eopTime);
+        console.log("Current deadline:", deadline);
+
+        const durationTimer = setInterval(() => {
+          const dynamicCurrentTime = Date.now();
+          const duration = eopTime * 1000 - dynamicCurrentTime;
           if (duration <= 0) {
             clearInterval(durationTimer);
           }
@@ -314,35 +444,66 @@ function auctionDetail() {
         return () => clearInterval(durationTimer);
       }
     }
-  }, [info]);
+  }, [info, deadline, currentTime]);
+
+  console.log("duration", duration);
+  const remainingAmount =
+    data?.highestPrice -
+    Number(auctionData?.depositAmount) / 1e18 -
+    Number(paidAmount) / 1e18;
+
+  const paidEnough = remainingAmount <= 0;
 
   const renderStatus = () => {
     if (!info) return null;
 
-    const currentTime = Date.now();
-    const eopTime = (info.endTime + deadline);
-    console.log("time", info.endTime, deadline, eopTime);
-    
-
     if (info.listingStatus === 0) {
       if (currentTime < info.startTime * 1000) {
         return (
-          <div className="flex flex-col  items-center justify-between">
-            <div className="flex flex-col items-center justify-between">
-              <div className="text-3xl mb-4">Đấu giá sẽ mở trong</div>
-              <div className="text-5xl font-semibold">
-                {" "}
-                {formatTime(countdown)}
-              </div>
-            </div>
-            <div className="pt-3">({formatDate(info.startTime)})</div>
-            <Button
-              className="mt-5 w-[200px] text-xl rounded-xl"
-              onClick={handleDeposit}
-            >
-              Đặt cọc
-            </Button>
-            <div className="mt-1">*Muộn nhất trước 3 ngày</div>
+          <div className="flex flex-col items-center justify-between">
+            {checkKYC ? (
+              <>
+                <div className="flex flex-col items-center justify-between">
+                  <div className="text-3xl mb-4">Đấu giá sẽ mở trong</div>
+                  <div className="text-5xl font-semibold">
+                    {formatTime(countdown)}
+                  </div>
+                </div>
+                <div className="pt-3">({formatDate(info.startTime)})</div>
+                {authorized ? (
+                  <Button
+                    className="mt-5 w-[200px] text-xl rounded-xl"
+                    disabled
+                  >
+                    Đợi đấu giá bắt đầu
+                  </Button>
+                ) : checkApprove <= 0 ? (
+                  <Button
+                    className="mt-5 w-[200px] text-xl rounded-xl"
+                    onClick={handleApprove}
+                  >
+                    Approve
+                  </Button>
+                ) : (
+                  <Button
+                    className="mt-5 w-[200px] text-xl rounded-xl"
+                    onClick={handleDeposit}
+                  >
+                    Đặt cọc
+                  </Button>
+                )}
+
+                <div className="mt-1">
+                  *Đặt cọc muộn nhất {Number(auctionData?.depositTime) / 60}{" "}
+                  phút trước khid dấu giá bắt đầu{" "}
+                </div>
+                <div className="mt-1">
+                  *Số tiền đặt cọc: {Number(auctionData?.depositAmount) / 1e18}{" "}
+                </div>
+              </>
+            ) : (
+              <div className="text-xl">Tài khoản chưa được xác thực KYC.</div>
+            )}
           </div>
         );
       } else if (
@@ -373,19 +534,42 @@ function auctionDetail() {
                 onChange={(e) => setOfferPrice(e.target.value)}
               />
               <div className="">*Bước giá {info?.stepPrice} VND</div>
-              <Button
-                className="w-[200px] text-xl rounded-xl"
-                onClick={async () => {
-                  try {
-                    await handleMakeOffer();
-                    await saveOffer();
-                  } catch (error) {
-                    console.error("handleMakeOffer failed:", error);
-                  }
-                }}
-              >
-                Trả giá
-              </Button>
+              {checkApprove <= 0 ? (
+                authorized ? (
+                  <Button
+                    className="mt-5 w-[200px] text-xl rounded-xl"
+                    onClick={handleApprove}
+                  >
+                    Approve
+                  </Button>
+                ) : (
+                  <Button
+                    className="mt-5 w-[200px] text-xl rounded-xl"
+                    disabled
+                  >
+                    Chưa đặt cọc
+                  </Button>
+                )
+              ) : authorized ? (
+                <Button
+                  className="w-[200px] text-xl rounded-xl"
+                  onClick={async () => {
+                    try {
+                      await handleMakeOffer();
+                      await delay(20000);
+                      await saveOffer();
+                    } catch (error) {
+                      console.error("handleMakeOffer failed:", error);
+                    }
+                  }}
+                >
+                  Trả giá
+                </Button>
+              ) : (
+                <Button className="w-[200px] text-xl rounded-xl" disabled>
+                  Chưa đặt cọc
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -393,8 +577,8 @@ function auctionDetail() {
         return <div className="text-3xl">Không khả dụng</div>;
       }
     } else if (info.listingStatus === 1) {
-      console.log(currentTime,eopTime*1000);
-      
+      console.log(currentTime, eopTime * 1000);
+
       return (
         <div className="flex justify-center items-center gap-20">
           <div className="border-[2px] rounded-lg flex flex-col justify-center items-center p-3 m-3 h-[200px] w-[350px] bg-[#4A6D7C]">
@@ -419,54 +603,179 @@ function auctionDetail() {
             <div className="text-3xl font-bold">
               Giá trúng đấu giá: {data?.highestPrice}đ
             </div>
-            <div className="text-lg font-bold">
-              Số tiền còn lại phải trả: {data?.highestPrice}đ
+            <div className="text-3xl font-bold">
+              Người trúng đấu giá : {shortenAddress(highestBidder)}
             </div>
-            {currentTime < eopTime* 1000 ? (
-              <>
-                <Input
-                  type="number"
-                  placeholder={""}
-                  className="w-[400px] !placeholder-opacity-80 !placeholder-white bg-[#475657]"
-                  name="price"
-                  value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                />
-                <Button
-                  className="w-[200px] text-xl rounded-xl"
-                  onClick={handleFund}
-                >
-                  Trả góp
-                </Button>
-              </>
-            ) : (
-              <div className="flex flex-row justify-between gap-5">
-                <Button
-                  className="w-[250px] text-xl rounded-xl"
-                  onClick={handleClaimFundTimeOut}
-                >
-                  Nhận lại số tiền đã góp
-                </Button>
-              </div>
-            )}
-            <div className=" text-xs ffont-style: italic flex flex-col justify-start items-start max-w-[400]">
-              <div className="mb-5">
-                *Sau 3 ngày, nếu không nộp đủ số tiền trên thì phiên đấu giá coi
-                như bị huỷ bỏ và không được hoàn trả số tiền cọc
-              </div>
-              <div className="">*Có thể trả góp theo từng phần đến khi đủ</div>
+            <div className="flex flex-col justify-between items-center gap-5">
+              {highestBidder === account.address ? (
+                <>
+                  {currentTime < eopTime * 1000 ? (
+                    <>
+                      {remainingAmount > 0 && (
+                        <>
+                          <div className="text-lg font-bold">
+                            Số tiền còn lại phải trả: {remainingAmount} đ
+                          </div>
+                          <Input
+                            type="number"
+                            placeholder=""
+                            className="w-[400px] !placeholder-opacity-80 !placeholder-white bg-[#475657]"
+                            name="price"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                          />
+                          {checkApprove <= 0 ? (
+                            <Button
+                              className="mt-5 w-[200px] text-xl rounded-xl"
+                              onClick={handleApprove}
+                            >
+                              Approve
+                            </Button>
+                          ) : (
+                            <Button
+                              className="w-[200px] text-xl rounded-xl"
+                              onClick={handleFund}
+                            >
+                              Trả góp
+                            </Button>
+                          )}
+                        </>
+                      )}
+
+                      <div className="text-xs italic flex flex-col justify-start items-start max-w-[400px]">
+                        <div className="mb-5">
+                          *Sau 3 ngày, nếu không nộp đủ số tiền trên thì phiên
+                          đấu giá coi như bị huỷ bỏ và không được hoàn trả số
+                          tiền cọc
+                        </div>
+                        <div>*Có thể trả góp theo từng phần đến khi đủ</div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-row justify-between gap-5">
+                      <Button
+                        className="w-[250px] text-xl rounded-xl"
+                        onClick={handleClaimFundTimeOut}
+                      >
+                        Nhận lại số tiền đã góp
+                      </Button>
+                    </div>
+                  )}
+
+                  {paidEnough && (
+                    <div className="text-3xl font-bold text-white mt-3">
+                      Đã trả đủ tiền, kiểm tra biển số trong tài khoản
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col justify-between items-center gap-5">
+                  <h3>Chúc bạn may mắn lần sau</h3>
+                  {authorized && (
+                    <Button
+                      className="w-[120px] border border-white rounded-xl"
+                      onClick={handleWithdrawDeposit}
+                    >
+                      Nhận lại tiền cọc
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       );
     } else if (info.listingStatus === 3) {
-      return <div className="text-3xl">Đấu giá thành công</div>;
-    }
-      else {
+      return (
+        <div className="flex flex-col justify-between items-center gap-7">
+          <div className="text-5xl font-bold">Đấu giá thành công</div>
+          <div className="text-3xl font-semibold">
+            Số tiền thắng đấu giá: {data?.highestPrice}đ{" "}
+          </div>
+          <div className="text-xl">
+            Người chiến thắng:
+            <a
+              href={`https://amoy.polygonscan.com/address/${info?.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white hover:text-blue-500 ml-2"
+            >
+              {shortenAddress(info?.owner)}
+            </a>
+          </div>
+        </div>
+      );
+    } else {
       return <div className="text-3xl">Không khả dụng</div>;
     }
   };
 
+  console.log("higgest bidder", highestBidder);
+
+  useEffect(() => {
+    const getAuctionData = async () => {
+      try {
+        const deadline = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "deadline",
+        });
+
+        const depositAmount = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "depositAmount",
+        });
+
+        const depositTime = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "depositTime",
+        });
+        setAuctionData({
+          deadline: deadline.toString(),
+          depositAmount: depositAmount.toString(),
+          depositTime: depositTime.toString(),
+        });
+      } catch (error) {
+        console.log("Error Approve: ", error);
+        toast.error(error?.message || error?.reason);
+      }
+    };
+    getAuctionData();
+  }, []);
+
+  console.log("highID", info?.highestOfferId);
+
+  useEffect(() => {
+    const getPaidAmount = async () => {
+      const highestOfferId = info?.highestOfferId;
+      if (highestOfferId === undefined || highestOfferId === null) {
+        console.log("highestOfferId is not available:", highestOfferId);
+        return;
+      }
+
+      try {
+        console.log("Fetching paid amount for highestOfferId:", highestOfferId);
+        const paidAmount = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "offers",
+          args: [param.listingId, highestOfferId],
+        });
+
+        console.log("getPaidAmount:", paidAmount[4]);
+        setPaidAmount(paidAmount[4]);
+      } catch (error) {
+        console.error("Error getting paid amount:", error);
+        toast.error(
+          error?.message || error?.reason || "Unknown error occurred"
+        );
+      }
+    };
+
+    getPaidAmount();
+  }, [info?.highestOfferId, config, param.listingId, auctiontAbi]);
 
   const formatTime = (time) => {
     const seconds = Math.floor((time / 1000) % 60);
@@ -476,7 +785,6 @@ function auctionDetail() {
 
     return `${days} ngày ${hours}:${minutes}:${seconds}`;
   };
-
 
   const formatDate = (time) => {
     const date = new Date(time * 1000);
@@ -545,16 +853,20 @@ function auctionDetail() {
           >
             {authorized ? (
               <div className="flex flex-row justify-between items-center gap-10">
-                <div className="text-xl font-bold">Đã đặt cọc</div>{" "}
+                <div className="text-xl font-bold">
+                  {shortenAddress(account.address)} Đã đặt cọc
+                </div>{" "}
                 <Button
-                  className="w-[120px] border border-white rounded-xl "
-                  onClick={handleWithdrawDeposit}
-                >
-                  Nhận lại cọc
-                </Button>
+                      className="w-[120px] border border-white rounded-xl"
+                      onClick={handleWithdrawDeposit}
+                    >
+                      Nhận lại tiền cọc
+                    </Button>
               </div>
             ) : (
-              <div className="text-xl font-bold">Chưa đặt cọc</div>
+              <div className="text-xl font-bold">
+                {shortenAddress(account.address)} Chưa đặt cọc
+              </div>
             )}
           </div>
           <div className=" border-[2px] rounded-lg w-full justify-around items-center flex h-full pl-5">

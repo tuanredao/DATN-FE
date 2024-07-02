@@ -7,7 +7,7 @@ import { writeContract, waitForTransactionReceipt } from "@wagmi/core";
 import { nftContractAbi } from "@/abi/nftContractAbi";
 import InputImageBtn from "@/components/AddImage";
 import { toast } from "react-toastify";
-import { config } from "@/provider/RainbowProvider"; 
+import { config } from "@/provider/RainbowProvider";
 
 function dangKyBienSoPage(props) {
   const { address } = useAccount();
@@ -44,13 +44,17 @@ function dangKyBienSoPage(props) {
         functionName: "safeMint",
         args: [address, bienSo, tinhThanhPho, loaiXe],
       });
-
+  
       const finish = async () => {
         await waitForTransactionReceipt(config, {
           hash,
         });
+  
+        await new Promise(resolve => setTimeout(resolve, 10000));
+  
+        await saveNFT();
       };
-
+  
       toast.promise(finish(), {
         pending: "Process minting...",
         success: "Mint NFT successful!",
@@ -61,14 +65,13 @@ function dangKyBienSoPage(props) {
       toast.error(error?.message || error?.reason);
     }
   };
-
+  
   const saveNFT = async () => {
-
     try {
       const response = await fetch("http://localhost:5000/BienSo/save-all", {
-        method: "POST"
+        method: "POST",
       });
-
+  
       if (response.ok) {
         toast.success("Data saved successfully!");
       } else {
@@ -87,6 +90,24 @@ function dangKyBienSoPage(props) {
     <main className="bg-[#475657] min-h-screen">
       <div className="text-white border-2 rounded-lg border-white p-10 m-5">
         <p className="mb-5 text-4xl font-semibold">Đăng kí biển số đấu giá</p>
+        <div className="mb-10">
+          <div className="!text-white items-center flex flex-row gap-5">
+            <div className="text-xl font-medium">Ví liên kết</div>
+            <Input
+              disabled
+              placeholder=""
+              value={address}
+              className="w-[540px] bg-[#475657] text-xl font-bold items-center"
+            />
+            <div
+              className={`rounded-full border border-white p-2 text-[10px] ${
+                authorized ? "bg-green-950" : "bg-red-950"
+              }`}
+            >
+              {authorized ? "Cơ quan có thẩm quyền" : "Không có quyền"}
+            </div>
+          </div>
+        </div>
         <div className="border-2 rounded-lg border-white ">
           <div className="flex justify-center items-center ">
             <div className="gap-8 flex flex-col">
@@ -142,35 +163,32 @@ function dangKyBienSoPage(props) {
           </div>
           <div className="justify-center flex my-5 gap-5">
             <Button
-              className="w-[200px] text-xl rounded-xl"
+              className="w-[250px] text-xl rounded-xl"
               onClick={handleMintNFT}
             >
-              Mint
-            </Button>
-            <Button
-              className="w-[200px] text-xl rounded-xl"
-              onClick={saveNFT}
-            >
-              Xác nhận biển số
+              Đăng ký biển số NFT
             </Button>
           </div>
         </div>
-        <div className="mt-5">
-          <div className="!text-white items-center flex flex-row gap-5">
-            <div className="text-xl font-medium">Ví liên kết</div>
-            <Input
-              disabled
-              placeholder=""
-              value={address}
-              className="w-[540px] bg-[#475657] text-xl font-bold items-center"
-            />
-            <div
-              className={`rounded-full border border-white p-2 text-[10px] ${
-                authorized ? "bg-green-950" : "bg-red-950"
-              }`}
-            >
-              {authorized ? "Cơ quan có thẩm quyền" : "Không có quyền"}
-            </div>
+
+        {/* Phần tử mới để hiển thị biển số */}
+        {/* <div className="mt-10 flex justify-center ">
+          <p className="text-4xl font-bold text-white">
+            {bienSo.toUpperCase()}
+          </p>
+        </div> */}
+        <div className=" flex justify-center ">
+          <div className="mt-10 w-[750px] h-[450px] rounded-xl border border-white text-white bg-[#4A6D7C] flex flex-col justify-center items-center text-8xl font-bold gap-2">
+            {bienSo && (
+              <>
+                <div>{bienSo.replace(/-/g, "").slice(0, 3)}</div>
+                <div>
+                  {bienSo.replace(/-/g, "").slice(3, 6) +
+                    "." +
+                    bienSo.replace(/-/g, "").slice(6)}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@ export function ReactQueryProviders(
           <ReactQueryStreamedHydration>
             {props.children}
           </ReactQueryStreamedHydration>
-          <ReactQueryDevtools initialIsOpen={false} />
+          {/* <ReactQueryDevtools initialIsOpen={false} /> */}
         </QueryClientProvider>
       
     </>

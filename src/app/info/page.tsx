@@ -30,7 +30,7 @@ function infoPage(props) {
     frontImage: "",
     backImage: "",
     wallet: "",
-    KYC: false
+    KYC: false,
   });
 
   const [userInfo, setUserInfo] = useState(null);
@@ -38,8 +38,6 @@ function infoPage(props) {
 
   const [backImage, setBackImage] = useState(null);
   const [frontImage, setFrontImage] = useState(null);
-
-
 
   const fetchUserData = async () => {
     try {
@@ -75,7 +73,6 @@ function infoPage(props) {
     setIsEditing(true);
     setFormData({ ...userInfo });
   };
-  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,7 +80,7 @@ function infoPage(props) {
       ...prevFormData,
       [name]: value,
       wallet: account.address,
-      KYC: false
+      KYC: false,
     }));
   };
 
@@ -157,8 +154,20 @@ function infoPage(props) {
 
   return (
     <div className="text-white p-10">
-      <div className=" border-2 rounded-lg border-white w-full p-10">
-        <h1 className="">Thông tin cá nhân</h1>
+      <div className=" border-2 rounded-lg border-white w-full pb-10 px-10">
+        <div className="flex items-center justify-between">
+          <h1>Thông tin cá nhân</h1>
+          <div className="flex items-center">
+            <div
+              className={`w-4 h-4 rounded-full ${
+                formData?.KYC ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+            <span className="ml-2 text-2xl font-bold">
+              {formData?.KYC ? "Đã xác minh" : "Chưa được xác minh"}
+            </span>
+          </div>
+        </div>
         <div className="border-2 rounded-lg border-white p-5 flex justify-between">
           <div>
             <div className="">Họ và tên</div>
@@ -279,7 +288,7 @@ function infoPage(props) {
             <div className="w-full text-center">Ảnh mặt trước</div>
             <InputImageBtn
               setUrlImg={setFrontImage}
-              urlImg={frontImage || formData?.frontImage }
+              urlImg={frontImage || formData?.frontImage}
               title={undefined}
               disabled={!isEditing}
             />
@@ -312,16 +321,18 @@ function infoPage(props) {
         </div>
         <div className="pt-5 grid grid-cols-37 ">
           <div>
-          {saveStatus === "success" && (
-            <div className="text-green-500">
-              Thay đổi đã được lưu thành công.
-            </div>
-          )}
-          {saveStatus === "error" && (
-            <div className="text-red-500">Đã xảy ra lỗi khi lưu thông tin.</div>
-          )}
+            {saveStatus === "success" && (
+              <div className="text-green-500">
+                Thay đổi đã được lưu thành công.
+              </div>
+            )}
+            {saveStatus === "error" && (
+              <div className="text-red-500">
+                Đã xảy ra lỗi khi lưu thông tin.
+              </div>
+            )}
           </div>
-          <div className={`flex justify-center w-full gap-10 pt-5 pr-[400px]` }>
+          <div className={`flex justify-center w-full gap-10 pt-5 pr-[400px]`}>
             <Button
               variant="outline"
               className={`rounded-full ${

@@ -20,7 +20,7 @@ function Page(props) {
       console.log(error);
     }
   };
-
+  
   useEffect(() => {
     handleGetInfo();
   }, []);
@@ -28,28 +28,41 @@ function Page(props) {
   const filterData = (item) => {
     return (
       item.bienSo.toLowerCase().includes(searchBienso.trim().toLowerCase()) &&
-      item.tinhThanhPho.toLowerCase().includes(searchTinhThanhPho.trim().toLowerCase()) &&
+      item.tinhThanhPho
+        .toLowerCase()
+        .includes(searchTinhThanhPho.trim().toLowerCase()) &&
       item.loaiXe.toLowerCase().includes(searchLoaiXe.trim().toLowerCase()) &&
       (filterState === "all" || item.trangThai === parseInt(filterState))
     );
   };
 
-
   return (
     <main className="bg-[#475657] min-h-screen">
       <div>
-        <div className="flex justify-center items-center pt-10 pb-0">
-          <p className="text-white text-5xl">BIỂN SỐ XE ĐƯỢC ĐẤU GIÁ</p>
-        </div>
-        <div className="pb-10 mb-10 border-b-2">
-          <Search
-            searchBienso={searchBienso}
-            setSearchBienso={setSearchBienso}
-            searchTinhThanhPho={searchTinhThanhPho}
-            setSearchTinhThanhPho={setSearchTinhThanhPho}
-            searchLoaiXe={searchLoaiXe}
-            setSearchLoaiXe={setSearchLoaiXe}
-          />
+        <div
+          style={{
+            backgroundImage: `url(/images/bghome.jpg)`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center", 
+            backgroundSize: "cover",
+            width: "100%", 
+            height: "400px",
+          }}
+          className="border-white border-b-2 flex flex-col items-center justify-center gap-10"
+        >
+          <div className="flex justify-center items-center pt-10 pb-0">
+            <p className="text-white text-7xl font-semibold">BIỂN SỐ XE ĐƯỢC ĐẤU GIÁ</p>
+          </div>
+          <div className="pb-10 mb-10 ">
+            <Search
+              searchBienso={searchBienso}
+              setSearchBienso={setSearchBienso}
+              searchTinhThanhPho={searchTinhThanhPho}
+              setSearchTinhThanhPho={setSearchTinhThanhPho}
+              searchLoaiXe={searchLoaiXe}
+              setSearchLoaiXe={setSearchLoaiXe}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-5 gap-5 p-5 place-items-center">
           {info.filter(filterData).map((i, index) => (

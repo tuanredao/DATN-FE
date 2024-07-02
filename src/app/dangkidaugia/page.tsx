@@ -3,18 +3,22 @@ import React, { useRef, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "wagmi";
-import { writeContract, waitForTransactionReceipt } from "@wagmi/core";
+import {
+  writeContract,
+  waitForTransactionReceipt,
+  readContract,
+} from "@wagmi/core";
 import { auctiontAbi } from "@/abi/auctionAbi";
+import { nftContractAbi } from "@/abi/nftContractAbi";
 import InputImageBtn from "@/components/AddImage";
 import { toast } from "react-toastify";
-import { config } from "@/provider/RainbowProvider"; 
+import { config } from "@/provider/RainbowProvider";
 
 function dangKyDauGiaPage(props) {
   const { address } = useAccount();
   const isConnected = useAccount().isConnected;
   console.log(isConnected);
 
-  const [nftContract, setnftContract] = useState("");
   const [tokenId, setTokenId] = useState("");
   const [id, setId] = useState("");
   const [offerId, setOfferId] = useState("");
@@ -26,7 +30,13 @@ function dangKyDauGiaPage(props) {
   const [depositAmount, setDepositAmount] = useState<any>("");
   const [depositTime, setDepositTime] = useState("");
   const [authorized, setAuthorized] = useState(false);
-
+  const [approved, setApproved] = useState(false);
+  const [auctionData, setAuctionData] = useState({
+    deadline: "",
+    depositAmount: "",
+    depositTime: "",
+  });
+  
   useEffect(() => {
     const checkAuthorization = async () => {
       if (address === "0x718a337bbd8ED6a2d50834e84BEe8874E9dD5e17") {
@@ -39,17 +49,78 @@ function dangKyDauGiaPage(props) {
     checkAuthorization();
   }, [address]);
 
-  const handleSignAuction = async () => {
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!address) {
+        console.log("Address is undefined or not provided.");
+        return;
+      }
+
+      try {
+        const approved = await readContract(config, {
+          abi: nftContractAbi,
+          address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+          functionName: "isApprovedForAll",
+          args: [address, "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f"],
+        });
+        console.log("approved", approved);
+        setApproved(approved);
+      } catch (error) {
+        console.log("Error checking approval:", error);
+      }
+    };
+
+    checkApproval();
+  }, [address]);
+
+  const handleApprove = async () => {
     if (!authorized) {
       toast.error("Bạn không có quyền thực hiện hành động này.");
       return;
     }
     try {
       const hash = await writeContract(config, {
+        abi: nftContractAbi,
+        address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+        functionName: "setApprovalForAll",
+        args: ["0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f", true],
+      });
+      const finish = async () => {
+        waitForTransactionReceipt(config, {
+          hash,
+        });
+
+        toast.promise(finish(), {
+          pending: "Process pausing...",
+          success: "Approve successful!",
+          error: "Approve failed, please try again!",
+        });
+      };
+    } catch (error) {
+      console.log("Error Approve: ", error);
+      toast.error(error?.message || error?.reason);
+    }
+  };
+
+  const handleSignAuction = async () => {
+    if (!authorized) {
+      toast.error("Bạn không có quyền thực hiện hành động này.");
+      return;
+    }
+
+    try {
+      const hash = await writeContract(config, {
         abi: auctiontAbi,
         address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "createListing",
-        args: [nftContract, tokenId, price*1e18, stepPrice*1e18, startTime, duration],
+        args: [
+          "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+          tokenId,
+          price * 1e18,
+          stepPrice * 1e18,
+          startTime,
+          duration,
+        ],
       });
 
       const finish = async () => {
@@ -57,20 +128,9 @@ function dangKyDauGiaPage(props) {
           hash,
         });
 
-        try {
-          const response = await fetch("http://localhost:5000/Auction/save", {
-            method: "POST",
-          });
+        await new Promise((resolve) => setTimeout(resolve, 10000));
 
-          if (response.ok) {
-            toast.success("Auction listing created and data saved!");
-          } else {
-            toast.error("Auction listing created but failed to save data!");
-          }
-        } catch (apiError) {
-          console.log("API request error: ", apiError);
-          toast.error("Auction listing created but failed to save data!");
-        }
+        await saveAuction();
       };
 
       toast.promise(finish(), {
@@ -85,10 +145,9 @@ function dangKyDauGiaPage(props) {
   };
 
   const saveAuction = async () => {
-
     try {
       const response = await fetch("http://localhost:5000/Auction/save", {
-        method: "GET"
+        method: "GET",
       });
 
       if (response.ok) {
@@ -102,7 +161,6 @@ function dangKyDauGiaPage(props) {
       toast.error("Error saving data, please try again!");
     }
   };
-
 
   const handlePause = async () => {
     if (!authorized) {
@@ -170,19 +228,18 @@ function dangKyDauGiaPage(props) {
         abi: auctiontAbi,
         address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDeadline",
-        args: [deadline],
+        args: [Number(deadline) * 60],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process ...",
-          success: "Set deadline successful!",
-          error: "Set deadline failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Set deadline successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Set deadline failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error: ", error);
       toast.error(error?.message || error?.reason);
@@ -199,19 +256,18 @@ function dangKyDauGiaPage(props) {
         abi: auctiontAbi,
         address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDepositAmount",
-        args: [depositAmount],
+        args: [Number(depositAmount) * 1e18],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process ...",
-          success: "Set Deposit Amount successful!",
-          error: "Set Deposit Amount failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Set Deposit Amount successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Set Deposit Amount failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
       console.log("Error : ", error);
       toast.error(error?.message || error?.reason);
@@ -228,21 +284,20 @@ function dangKyDauGiaPage(props) {
         abi: auctiontAbi,
         address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
         functionName: "setDepositTime",
-        args: [depositTime],
+        args: [Number(depositTime) * 60],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process ...",
-          success: "Set Deposit Time successful!",
-          error: "Set Deposit Time failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Set Deposit Time successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Set Deposit Time failed: ${data.message}`;
+          },
+        },
+      });
     } catch (error) {
-      console.log("Error : ", error);
+      console.log("Error: ", error);
       toast.error(error?.message || error?.reason);
     }
   };
@@ -259,17 +314,19 @@ function dangKyDauGiaPage(props) {
         functionName: "endAuction",
         args: [id],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process ...",
-          success: "Set Deposit Time successful!",
-          error: "Set Deposit Time failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "End Auction successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `End Auction failed: ${data.message}`;
+          },
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      await saveAuction();
     } catch (error) {
       console.log("Error : ", error);
       toast.error(error?.message || error?.reason);
@@ -288,22 +345,87 @@ function dangKyDauGiaPage(props) {
         functionName: "cancelListing",
         args: [id],
       });
-      const finish = async () => {
-        waitForTransactionReceipt(config, {
-          hash,
-        });
 
-        toast.promise(finish(), {
-          pending: "Process ...",
-          success: "Set Deposit Time successful!",
-          error: "Set Deposit Time failed, please try again!",
-        });
-      };
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Cancle Auction successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Cancle Auction failed: ${data.message}`;
+          },
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      await saveAuction();
     } catch (error) {
       console.log("Error : ", error);
       toast.error(error?.message || error?.reason);
     }
   };
+
+  const handleTimeout = async () => {
+    if (!authorized) {
+      toast.error("Bạn không có quyền thực hiện hành động này.");
+      return;
+    }
+    try {
+      const hash = await writeContract(config, {
+        abi: auctiontAbi,
+        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        functionName: "handleTimeOut",
+        args: [id],
+      });
+      toast.promise(waitForTransactionReceipt(config, { hash }), {
+        pending: "Process ...",
+        success: "Handle Timeout successful!",
+        error: {
+          render({ data }: { data: any }) {
+            return `Handle Timeout failed: ${data.message}`;
+          },
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      await saveAuction();
+    } catch (error) {
+      console.log("Error : ", error);
+      toast.error(error?.message || error?.reason);
+    }
+  };
+
+  useEffect(() => {
+    const getAuctionData = async () => {
+      try {
+        const deadline = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "deadline",
+        });
+
+        const depositAmount = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "depositAmount",
+        });
+
+        const depositTime = await readContract(config, {
+          abi: auctiontAbi,
+          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          functionName: "depositTime",
+        });
+        setAuctionData({
+          deadline: deadline.toString(),
+          depositAmount: depositAmount.toString(),
+          depositTime: depositTime.toString(),
+        });
+      } catch (error) {
+        console.log("Error Approve: ", error);
+        toast.error(error?.message || error?.reason);
+      }
+    };
+    getAuctionData();
+  }, []);
 
   const disableInputs = !authorized;
 
@@ -332,22 +454,6 @@ function dangKyDauGiaPage(props) {
           <p className="m-5 text-4xl font-semibold">Đăng kí biển số đấu giá</p>
           <div className="flex items-center w-full">
             <div className="gap-8 flex flex-col w-full">
-              <div className="p-5 flex flex-row justify-between">
-                <p className="text-2xl font-medium">NFT Contract</p>
-                <div>
-                  <Input
-                    type="text"
-                    placeholder={""}
-                    className={`w-[900px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
-                      disableInputs && "opacity-50"
-                    }`}
-                    name="nftContract"
-                    value={nftContract}
-                    onChange={(e) => setnftContract(e.target.value)}
-                    disabled={disableInputs}
-                  />
-                </div>
-              </div>
               <div className="p-5 flex flex-row justify-between">
                 <p className="text-2xl font-medium">Token ID</p>
                 <div>
@@ -400,13 +506,13 @@ function dangKyDauGiaPage(props) {
                 <p className="text-2xl font-medium">Thời gian bắt đầu</p>
                 <div>
                   <Input
-                    type="text"
+                    type="datetime-local"
                     placeholder={""}
                     className={`w-[900px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
                       disableInputs && "opacity-50"
                     }`}
                     name="startTime"
-                    value={startTime}
+                    value={utcToEpoch(startTime)}
                     onChange={(e) => setstartTime(e.target.value)}
                     disabled={disableInputs}
                   />
@@ -431,19 +537,21 @@ function dangKyDauGiaPage(props) {
             </div>
           </div>
           <div className="justify-center flex my-5 gap-7">
-            <Button
-              className="w-[250px] text-xl rounded-xl"
-              onClick={handleSignAuction}
-            >
-              Đăng kí đấu giá
-            </Button>
-
-            <Button
-              className="w-[250px] text-xl rounded-xl"
-              onClick={saveAuction}
-            >
-              Xác nhận phiên đấu giá
-            </Button>
+            {approved ? (
+              <Button
+                className="w-[250px] text-xl rounded-xl"
+                onClick={handleSignAuction}
+              >
+                Đăng kí đấu giá
+              </Button>
+            ) : (
+              <Button
+                className="w-[250px] text-xl rounded-xl"
+                onClick={handleApprove}
+              >
+                Approve
+              </Button>
+            )}
           </div>
         </div>
 
@@ -453,7 +561,7 @@ function dangKyDauGiaPage(props) {
           </p>
           <div className="flex items-center w-full  ">
             <div className="gap-8 flex flex-col w-full ">
-              <div className="p-5 flex flex-row justify-center border-2 rounded-2xl border-white mx-72 ">
+              <div className="p-5 flex flex-row justify-between border-2 rounded-2xl border-white mx-60 ">
                 <Input
                   type="number"
                   placeholder={"Nhập ID"}
@@ -466,16 +574,22 @@ function dangKyDauGiaPage(props) {
                   disabled={disableInputs}
                 />
                 <Button
-                  className="w-[300px] text-xl rounded-xl mx-20"
+                  className="w-[250px] text-xl rounded-xl mx-20"
                   onClick={handleEndAuction}
                 >
                   Kết thúc phiên đấu giá
                 </Button>
                 <Button
-                  className="w-[300px] text-xl rounded-xl mx-20"
+                  className="w-[250px] text-xl rounded-xl mx-20"
                   onClick={handleCanceAuction}
                 >
                   Huỷ phiên đấu giá
+                </Button>
+                <Button
+                  className="w-[250px] text-xl rounded-xl mx-20"
+                  onClick={handleTimeout}
+                >
+                  Thu hồi phiên đấu giá
                 </Button>
               </div>
               <div className="p-5 flex flex-row justify-between">
@@ -497,12 +611,12 @@ function dangKyDauGiaPage(props) {
               </div>
               <div className="p-5 flex flex-row items-center justify-between">
                 <p className="text-2xl font-medium">
-                  Khoảng thời gian tối đa để trả tiền
+                  Khoảng thời gian tối đa để trả tiền ( phút )
                 </p>
                 <div className="flex justify-end gap-40">
                   <Input
                     type="text"
-                    placeholder={""}
+                    placeholder={`${Number(auctionData?.deadline) / 60}`}
                     className={`w-[400px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
                       disableInputs && "opacity-50"
                     }`}
@@ -524,7 +638,7 @@ function dangKyDauGiaPage(props) {
                 <div className="flex justify-end gap-40">
                   <Input
                     type="text"
-                    placeholder={""}
+                    placeholder={`${Number(auctionData?.depositAmount) / 1e18}`}
                     className={`w-[400px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
                       disableInputs && "opacity-50"
                     }`}
@@ -542,11 +656,13 @@ function dangKyDauGiaPage(props) {
                 </div>
               </div>
               <div className="p-5 flex flex-row justify-between">
-                <p className="text-2xl font-medium">Thời gian cọc trước</p>
+                <p className="text-2xl font-medium">
+                  Thời gian cọc trước (phút)
+                </p>
                 <div className="flex justify-end gap-40">
                   <Input
                     type="text"
-                    placeholder={""}
+                    placeholder={`${Number(auctionData?.depositTime) / 60}`}
                     className={`w-[400px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
                       disableInputs && "opacity-50"
                     }`}
@@ -569,6 +685,12 @@ function dangKyDauGiaPage(props) {
       </div>
     </main>
   );
+}
+export function utcToEpoch(utcTimeString) {
+  const utcDate = new Date(utcTimeString);
+  const epochTime = Math.floor(utcDate.getTime() / 1000);
+
+  return epochTime;
 }
 
 export default dangKyDauGiaPage;

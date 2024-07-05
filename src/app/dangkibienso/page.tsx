@@ -40,7 +40,7 @@ function dangKyBienSoPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: nftContractAbi,
-        address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+        address: "0xF39480AaD2848047D6354B5199Ef078c30B0cE49",
         functionName: "safeMint",
         args: [address, bienSo, tinhThanhPho, loaiXe],
       });

@@ -60,7 +60,7 @@ function auctionDetail() {
           abi: USDCabi,
           address: "0xF4bFc32C9B60c9Dfc43060Ac168690e536646cc2",
           functionName: "allowance",
-          args: [account.address, "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f"],
+          args: [account.address, "0xd4f90022234114eE921AA5E3e86f2b27682AA188"],
         });
         console.log("approved", approved);
         setCheckApprove(approved);
@@ -78,7 +78,7 @@ function auctionDetail() {
         abi: USDCabi,
         address: "0xF4bFc32C9B60c9Dfc43060Ac168690e536646cc2",
         functionName: "approve",
-        args: ["0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f", 99999 * 1e18],
+        args: ["0xd4f90022234114eE921AA5E3e86f2b27682AA188", 99999 * 1e18],
       });
 
       toast.promise(waitForTransactionReceipt(config, { hash }), {
@@ -199,7 +199,7 @@ function auctionDetail() {
     if (address) {
       handleCheckKYC();
     }
-  }, [address]);
+  }, [account.address]);
   console.log(info?.id, account.address);
 
   const getHighestBidder = async () => {
@@ -239,7 +239,7 @@ function auctionDetail() {
 
         const result = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "userHasDeposited",
           args: [info.id, account.address],
         });
@@ -257,7 +257,7 @@ function auctionDetail() {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "deposit",
         args: [info?.id],
       });
@@ -286,7 +286,7 @@ function auctionDetail() {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "makeOffer",
         args: [info?.id, offerPrice * 1e18],
       });
@@ -300,6 +300,10 @@ function auctionDetail() {
           },
         },
       });
+
+      await new Promise((resolve) => setTimeout(resolve, 15000));
+
+      await saveOffer();
     } catch (error) {
       console.log("Error Make Offer: ", error);
       toast.error(error?.message || error?.reason);
@@ -315,7 +319,7 @@ function auctionDetail() {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "fund",
         args: [info?.id, amount * 1e18],
       });
@@ -329,6 +333,10 @@ function auctionDetail() {
           },
         },
       });
+
+      await new Promise((resolve) => setTimeout(resolve, 15000));
+
+      await saveOffer();
     } catch (error) {
       console.log("Error Fund: ", error);
       toast.error(error?.message || error?.reason);
@@ -339,7 +347,7 @@ function auctionDetail() {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "claimFundTimeOut",
         args: [info?.id],
       });
@@ -363,7 +371,7 @@ function auctionDetail() {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "withdrawDeposit",
         args: [info?.id],
       });
@@ -553,15 +561,7 @@ function auctionDetail() {
               ) : authorized ? (
                 <Button
                   className="w-[200px] text-xl rounded-xl"
-                  onClick={async () => {
-                    try {
-                      await handleMakeOffer();
-                      await delay(20000);
-                      await saveOffer();
-                    } catch (error) {
-                      console.error("handleMakeOffer failed:", error);
-                    }
-                  }}
+                  onClick={handleMakeOffer}
                 >
                   Trả giá
                 </Button>
@@ -583,14 +583,20 @@ function auctionDetail() {
         <div className="flex justify-center items-center gap-20">
           <div className="border-[2px] rounded-lg flex flex-col justify-center items-center p-3 m-3 h-[200px] w-[350px] bg-[#4A6D7C]">
             {currentTime < eopTime * 1000 ? (
-              <div>
-                <div className="text-3xl text-center">
-                  Hạn cuối trả đủ tiền còn
+              remainingAmount <= 0 ? (
+                <div>
+                  <div className="text-3xl font-bold">Thành công</div>
                 </div>
-                <div className="text-4xl font-semibold text-center">
-                  {formatTime(duration)}
+              ) : (
+                <div>
+                  <div className="text-3xl text-center">
+                    Hạn cuối trả đủ tiền còn
+                  </div>
+                  <div className="text-4xl font-semibold text-center">
+                    {formatTime(duration)}
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <div>
                 <div className="text-3xl font-bold text-red-800">
@@ -717,19 +723,19 @@ function auctionDetail() {
       try {
         const deadline = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "deadline",
         });
 
         const depositAmount = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "depositAmount",
         });
 
         const depositTime = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "depositTime",
         });
         setAuctionData({
@@ -759,7 +765,7 @@ function auctionDetail() {
         console.log("Fetching paid amount for highestOfferId:", highestOfferId);
         const paidAmount = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "offers",
           args: [param.listingId, highestOfferId],
         });
@@ -854,18 +860,21 @@ function auctionDetail() {
             {authorized ? (
               <div className="flex flex-row justify-between items-center gap-10">
                 <div className="text-xl font-bold">
-                  {shortenAddress(account.address)} Đã đặt cọc
-                </div>{" "}
-                <Button
-                      className="w-[120px] border border-white rounded-xl"
-                      onClick={handleWithdrawDeposit}
-                    >
-                      Nhận lại tiền cọc
-                    </Button>
+                  {shortenAddress(account.address)} đã đặt cọc
+                </div>
+                {(info.listingStatus !== 0 || Date.now() > (info?.endTime * 1000)) &&
+                highestBidder !== account.address ? (
+                  <Button
+                    className="w-[120px] border border-white rounded-xl"
+                    onClick={handleWithdrawDeposit}
+                  >
+                    Nhận lại tiền cọc
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <div className="text-xl font-bold">
-                {shortenAddress(account.address)} Chưa đặt cọc
+                {shortenAddress(account.address)} chưa đặt cọc
               </div>
             )}
           </div>

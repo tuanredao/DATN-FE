@@ -25,6 +25,7 @@ function dangKyDauGiaPage(props) {
   const [price, setPrice] = useState<any>("");
   const [stepPrice, setstepPrice] = useState<any>("");
   const [startTime, setstartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [duration, setDuration] = useState("");
   const [deadline, setDeadline] = useState("");
   const [depositAmount, setDepositAmount] = useState<any>("");
@@ -36,7 +37,11 @@ function dangKyDauGiaPage(props) {
     depositAmount: "",
     depositTime: "",
   });
+
+  console.log("end time", utcToEpoch(endTime));
+  console.log("end time", utcToEpoch(endTime));
   
+
   useEffect(() => {
     const checkAuthorization = async () => {
       if (address === "0x718a337bbd8ED6a2d50834e84BEe8874E9dD5e17") {
@@ -59,9 +64,9 @@ function dangKyDauGiaPage(props) {
       try {
         const approved = await readContract(config, {
           abi: nftContractAbi,
-          address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+          address: "0xF39480AaD2848047D6354B5199Ef078c30B0cE49",
           functionName: "isApprovedForAll",
-          args: [address, "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f"],
+          args: [address, "0xd4f90022234114eE921AA5E3e86f2b27682AA188"],
         });
         console.log("approved", approved);
         setApproved(approved);
@@ -81,9 +86,9 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: nftContractAbi,
-        address: "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+        address: "0xF39480AaD2848047D6354B5199Ef078c30B0cE49",
         functionName: "setApprovalForAll",
-        args: ["0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f", true],
+        args: ["0xd4f90022234114eE921AA5E3e86f2b27682AA188", true],
       });
       const finish = async () => {
         waitForTransactionReceipt(config, {
@@ -111,15 +116,15 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "createListing",
         args: [
-          "0xbf35ff6953b0ec6F29DcB9982Ce71f7C7D0fF356",
+          "0xF39480AaD2848047D6354B5199Ef078c30B0cE49",
           tokenId,
           price * 1e18,
           stepPrice * 1e18,
-          startTime,
-          duration,
+          utcToEpoch(startTime),
+          utcToEpoch(endTime),
         ],
       });
 
@@ -170,7 +175,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "pause",
       });
       const finish = async () => {
@@ -198,7 +203,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "unpause",
       });
       const finish = async () => {
@@ -226,7 +231,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "setDeadline",
         args: [Number(deadline) * 60],
       });
@@ -254,7 +259,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "setDepositAmount",
         args: [Number(depositAmount) * 1e18],
       });
@@ -282,7 +287,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "setDepositTime",
         args: [Number(depositTime) * 60],
       });
@@ -310,7 +315,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "endAuction",
         args: [id],
       });
@@ -341,7 +346,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "cancelListing",
         args: [id],
       });
@@ -372,7 +377,7 @@ function dangKyDauGiaPage(props) {
     try {
       const hash = await writeContract(config, {
         abi: auctiontAbi,
-        address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+        address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
         functionName: "handleTimeOut",
         args: [id],
       });
@@ -399,19 +404,19 @@ function dangKyDauGiaPage(props) {
       try {
         const deadline = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "deadline",
         });
 
         const depositAmount = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "depositAmount",
         });
 
         const depositTime = await readContract(config, {
           abi: auctiontAbi,
-          address: "0x47EFC7e582cA15E802E23BC077eBdf252953Ac4f",
+          address: "0xd4f90022234114eE921AA5E3e86f2b27682AA188",
           functionName: "depositTime",
         });
         setAuctionData({
@@ -512,24 +517,24 @@ function dangKyDauGiaPage(props) {
                       disableInputs && "opacity-50"
                     }`}
                     name="startTime"
-                    value={utcToEpoch(startTime)}
+                    defaultValue={utcToEpoch(startTime)}
                     onChange={(e) => setstartTime(e.target.value)}
                     disabled={disableInputs}
                   />
                 </div>
               </div>
               <div className="p-5 flex flex-row justify-between">
-                <p className="text-2xl font-medium">Số ngày đấu giá</p>
+                <p className="text-2xl font-medium">Thời gian kết thúc</p>
                 <div>
                   <Input
-                    type="text"
+                    type="datetime-local"
                     placeholder={""}
                     className={`w-[900px] !placeholder-opacity-80 !placeholder-white bg-[#475657] ${
                       disableInputs && "opacity-50"
                     }`}
-                    name="duration"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
+                    name="endTime"
+                    defaultValue={utcToEpoch(endTime)}
+                    onChange={(e) => setEndTime(e.target.value)}
                     disabled={disableInputs}
                   />
                 </div>
